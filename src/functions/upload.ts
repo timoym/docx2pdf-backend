@@ -4,10 +4,10 @@ import { Readable } from "stream";
 import { v1 as uuidv1 } from "uuid";
 require("dotenv").config();
 
-const accountName = process.env.AZURE_STORAGE_ACCOUNT_NAME;
-const accountKey = process.env.AZURE_STORAGE_ACCOUNT_KEY;
-if (!accountName || !accountKey) {
-    throw new Error("Azure Storage account name and key must be provided in environment variables");
+const containerName = process.env.AZURE_STORAGE_CONTAINER_NAME;
+const connectionString = process.env.AZURE_STORAGE_CONNECTION_STRING;
+if (!containerName || !connectionString) {
+    throw new Error("Azure Storage container name and connection string must be provided");
 }
 
 export async function uploadFunction(request: HttpRequest, context: InvocationContext): Promise<HttpResponseInit> {
@@ -19,13 +19,9 @@ export async function uploadFunction(request: HttpRequest, context: InvocationCo
     }
 
     const fileId = uuidv1();
-    const sharedKeyCredential = new StorageSharedKeyCredential(accountName, accountKey);
-    const blobServiceClient = new BlobServiceClient(
-        `https://${accountName}.blob.core.windows.net`,
-        sharedKeyCredential
-    );
+    const blobServiceClient = new BlobServiceClient(connectionString);
 
-    const containerClient = blobServiceClient.getContainerClient("uploaded-docx-files");
+    const containerClient = blobServiceClient.getContainerClient(containerName);
     const blobClient = containerClient.getBlockBlobClient(fileId + ".docx");
 
     const uploadBlobResponse = await blobClient.uploadStream(Readable.from(request.body));
