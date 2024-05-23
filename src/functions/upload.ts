@@ -1,5 +1,10 @@
-import { app, HttpRequest, HttpResponseInit, InvocationContext } from "@azure/functions";
-import { BlobServiceClient, StorageSharedKeyCredential } from "@azure/storage-blob";
+import {
+  app,
+  HttpRequest,
+  HttpResponseInit,
+  InvocationContext,
+} from "@azure/functions";
+import { BlobServiceClient } from "@azure/storage-blob";
 import { Readable } from "stream";
 import { v1 as uuidv1 } from "uuid";
 require("dotenv").config();
@@ -7,40 +12,58 @@ require("dotenv").config();
 const containerName = process.env.AZURE_STORAGE_CONTAINER_NAME;
 const connectionString = process.env.AZURE_STORAGE_CONNECTION_STRING;
 if (!containerName || !connectionString) {
-    throw new Error("Azure Storage container name and connection string must be provided");
+  throw new Error(
+    "Azure Storage container name and connection string must be provided"
+  );
 }
 
-export async function uploadFunction(request: HttpRequest, context: InvocationContext): Promise<HttpResponseInit> {
-    if (!request.body) {
-        return {
-            status: 400,
-            body: "Please pass a file in the request body"
-        };
-    }
+async function streamToBuffer(stream: Readable): Promise<Buffer> {
+  return new Promise((resolve, reject) => {
+    const chunks: Buffer[] = [];
+    stream.on("data", (chunk) => chunks.push(chunk));
+    stream.on("end", () => resolve(Buffer.concat(chunks)));
+    stream.on("error", reject);
+  });
+}
 
-    const fileId = uuidv1();
-    const blobServiceClient = new BlobServiceClient(connectionString);
-
-    const containerClient = blobServiceClient.getContainerClient(containerName);
-    const blobClient = containerClient.getBlockBlobClient(fileId + ".docx");
-
-    const uploadBlobResponse = await blobClient.uploadStream(Readable.from(request.body));
-
-    if (uploadBlobResponse._response.status !== 201) {
-        return {
-            status: 500,
-            body: `Failed to upload file. Status code: ${uploadBlobResponse._response.status}`
-        };
-    }
-
+export async function uploadFunction(
+  request: HttpRequest,
+  context: InvocationContext
+): Promise<HttpResponseInit> {
+  if (!request.body) {
     return {
-        status: 200,
-        body: `File uploaded successfully. File Id: ${fileId}`
+      status: 400,
+      body: "Please pass a file in the request body",
     };
-};
+  }
 
-app.http('upload', {
-    methods: ['GET', 'POST'],
-    authLevel: 'anonymous',
-    handler: uploadFunction
+  const fileId = uuidv1();
+  const blobServiceClient =
+    BlobServiceClient.fromConnectionString(connectionString);
+  const containerClient = blobServiceClient.getContainerClient(containerName);
+  const blobClient = containerClient.getBlockBlobClient(fileId + ".docx");
+
+  try {
+    await blobClient.uploadData(
+      await streamToBuffer(Readable.from(request.body))
+    );
+    context.log("File uploaded successfully. File Id: ", fileId);
+  } catch (error) {
+    return {
+      status: 500,
+      body: JSON.stringify({ error: error.message }),
+    };
+  }
+
+  // return the file id as json string
+  return {
+    status: 200,
+    body: JSON.stringify({ fileId }),
+  };
+}
+
+app.http("upload", {
+  methods: ["POST"],
+  authLevel: "anonymous",
+  handler: uploadFunction,
 });
