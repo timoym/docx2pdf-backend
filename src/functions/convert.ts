@@ -13,6 +13,7 @@ import {
 } from "@adobe/pdfservices-node-sdk";
 import { Readable } from "stream";
 import {
+  createJob,
   initAdobeDocumentService,
   initAzureContainerClient,
 } from "../internalApi";
@@ -57,9 +58,12 @@ export async function convertFunction(
     const pollingUrl = await pdfServices.submit({ job });
 
     // save polling url to db
+    const jobId = await createJob(fileId, pollingUrl);
     return {
       status: 200,
-      body: JSON.stringify({ status: "success" }),
+      body: JSON.stringify({
+        jobId,
+      }),
     };
   } catch (error) {
     if (
@@ -68,9 +72,9 @@ export async function convertFunction(
       error instanceof ServiceApiError
     ) {
       context.log("Exception encountered while executing operation", error);
-    }else {
+    } else {
       context.log("Exception encountered while executing operation", error);
-    } 
+    }
   }
   return { body: "" };
 }
