@@ -20,6 +20,7 @@
     "uuid": "^9.0.1"
   },
   "devDependencies": {
+    "@types/mssql": "^9.1.5",
     "@types/node": "^18.x",
     "@types/uuid": "^9.0.8",
     "rimraf": "^5.0.0",
