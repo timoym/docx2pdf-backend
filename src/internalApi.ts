@@ -11,6 +11,7 @@ import {
   ServiceUsageError,
 } from "@adobe/pdfservices-node-sdk";
 import { BlobServiceClient } from "@azure/storage-blob";
+import { v1 as uuidv1 } from "uuid";
 
 export enum JobStatus {
   IN_PROGRESS = "inprogress",
@@ -85,11 +86,12 @@ export async function createJob(
   statusLink: string
 ): Promise<string> {
   try {
+    const jobId = uuidv1();
     const pool = await createDbPool();
     const result = await pool
       .request()
       .query(
-        `INSERT INTO dbo.conversionJobs (fileId, status, statusLink) VALUES ('${fileId}', '${JobStatus.IN_PROGRESS}', '${statusLink}')`
+        `INSERT INTO dbo.conversionJobs (Id, fileId, statusLink, status) VALUES ('${jobId}', '${fileId}', '${statusLink}', '${JobStatus.IN_PROGRESS}')`
       );
     return result.recordset[0].status;
   } catch (err) {
