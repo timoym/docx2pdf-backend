@@ -13,6 +13,7 @@ import {
 } from "../internalApi";
 import { CreatePDFResult } from "@adobe/pdfservices-node-sdk";
 import { Readable } from "stream";
+import { BlobSASPermissions, SASProtocol } from "@azure/storage-blob";
 
 export async function result(
   request: HttpRequest,
@@ -46,7 +47,8 @@ export async function result(
       );
       const escapedUrl = encodeURIComponent(
         await blobClient.generateSasUrl({
-          permissions: {
+          protocol: SASProtocol.Https,
+          permissions: BlobSASPermissions.from({
             read: true,
             write: false,
             delete: false,
@@ -58,7 +60,7 @@ export async function result(
             execute: false,
             setImmutabilityPolicy: false,
             permanentDelete: false,
-          },
+          }),
           expiresOn: new Date(Date.now() + 24 * 60 * 60 * 1000),
         })
       );
