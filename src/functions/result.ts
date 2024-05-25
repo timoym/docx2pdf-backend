@@ -13,6 +13,14 @@ export async function result(
 
   const name = request.query.get("name") || (await request.text()) || "world";
 
+  //Check status
+
+  //if status ok
+
+  //download from adobe and upload to blob
+
+  // return link to azure blob
+
   return { body: `Hello, ${name}!` };
 }
 
