@@ -14,6 +14,7 @@ import {
   ServicePrincipalCredentials,
   ServiceUsageError,
 } from "@adobe/pdfservices-node-sdk";
+import { JobStatus, getJobStatus } from "../dbApi";
 
 function getPollingUrlFromJobId(jobId: string): string {
   //TODO Query DB for the polling URL
@@ -25,23 +26,37 @@ export async function status(
   context: InvocationContext
 ): Promise<HttpResponseInit> {
   const jobId = request.query.get("jobId");
+  if (!jobId) {
+    return {
+      status: 400,
+      body: JSON.stringify({
+        message: "Missing jobId",
+      }),
+    };
+  }
+  const jobStatus = await getJobStatus(jobId);
+
+  /*
   const credentials = new ServicePrincipalCredentials({
     clientId: process.env.PDF_SERVICES_CLIENT_ID,
     clientSecret: process.env.PDF_SERVICES_CLIENT_SECRET,
   });
   const pdfServices = new PDFServices({ credentials });
   const pdfServicesResponse = pdfServices.getJobStatus({
-    pollingURL: getPollingUrlFromJobId(jobId)
+    pollingURL: getPollingUrlFromJobId(jobId),
   });
+  */
 
-  //TODO Convert adobe status to my status
-
-
-  return { body: `Hello, meme!` };
+  return {
+    status: 200,
+    body: JSON.stringify({
+      status: jobStatus,
+    }),
+  };
 }
 
 app.http("status", {
-  methods: ["GET", "POST"],
+  methods: ["GET"],
   authLevel: "anonymous",
   handler: status,
 });
