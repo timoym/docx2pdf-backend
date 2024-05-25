@@ -44,11 +44,12 @@ export async function result(
       const blobResponse = await blobClient.uploadStream(
         Readable.from(streamAsset.readStream)
       );
+      const escapedUrl = encodeURIComponent(blobClient.url);
       return {
         status: 200,
         body: JSON.stringify({
           status: JobStatus.DONE,
-          fileUrl: blobClient.url,
+          fileUrl: escapedUrl,
         }),
       };
     } catch (err) {
