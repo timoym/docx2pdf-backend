@@ -52,6 +52,17 @@ export async function convertFunction(
     const containerClient = blobServiceClient.getContainerClient(containerName);
     const blobClient = containerClient.getBlockBlobClient(fileId + ".docx");
 
+    //check if blob exists
+    const exists = await blobClient.exists();
+    if (!exists) {
+      return {
+        status: 404,
+        body: JSON.stringify({
+          error: "File not found",
+        }),
+      };
+    }
+
     const inputAsset = await pdfServices.upload({
       readStream: Readable.from(await blobClient.downloadToBuffer()),
       mimeType: MimeType.DOCX,
