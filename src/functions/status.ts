@@ -14,7 +14,11 @@ import {
   ServicePrincipalCredentials,
   ServiceUsageError,
 } from "@adobe/pdfservices-node-sdk";
-import { JobStatus, getJobStatus, initAdobeDocumentService } from "../internalApi";
+import {
+  JobStatus,
+  getJobStatus,
+  initAdobeDocumentService,
+} from "../internalApi";
 
 function getPollingUrlFromJobId(jobId: string): string {
   //TODO Query DB for the polling URL
@@ -35,6 +39,15 @@ export async function status(
     };
   }
   let jobStatus = await getJobStatus(jobId);
+
+  if (jobStatus === JobStatus.UNKNOWN) {
+    return {
+      status: 404,
+      body: JSON.stringify({
+        message: "Job not found",
+      }),
+    };
+  }
 
   if (jobStatus === JobStatus.DONE) {
     return {

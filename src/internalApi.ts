@@ -16,6 +16,7 @@ export enum JobStatus {
   IN_PROGRESS = "inprogress",
   DONE = "done",
   FAILED = "failed",
+  UNKNOWN = "unknown",
 }
 
 async function createDbPool() {
@@ -51,6 +52,10 @@ export async function getJobStatus(jobId: string): Promise<JobStatus> {
     const result = await pool
       .request()
       .query(`SELECT status FROM dbo.conversionJobs WHERE Id = '${jobId}'`);
+    //check if job exists
+    if (result.recordset.length === 0) {
+      return JobStatus.UNKNOWN;
+    }
     return result.recordset[0].status;
   } catch (err) {
     console.error(err);
