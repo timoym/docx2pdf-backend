@@ -93,7 +93,7 @@ export async function createJob(
       .query(
         `INSERT INTO dbo.conversionJobs (Id, fileId, statusLink, status) VALUES ('${jobId}', '${fileId}', '${statusLink}', '${JobStatus.IN_PROGRESS}')`
       );
-    return result.recordset[0].status;
+    return jobId;
   } catch (err) {
     console.error(err);
     throw err;
