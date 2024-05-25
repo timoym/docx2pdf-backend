@@ -6,25 +6,17 @@ import {
 } from "@azure/functions";
 import {
   CreatePDFJob,
-  CreatePDFResult,
-  PDFServices,
   SDKError,
   MimeType,
   ServiceApiError,
-  ServicePrincipalCredentials,
   ServiceUsageError,
 } from "@adobe/pdfservices-node-sdk";
-import { BlobServiceClient } from "@azure/storage-blob";
 import { Readable } from "stream";
+import {
+  initAdobeDocumentService,
+  initAzureContainerClient,
+} from "../internalApi";
 require("dotenv").config();
-
-const containerName = process.env.AZURE_STORAGE_CONTAINER_NAME;
-const connectionString = process.env.AZURE_STORAGE_CONNECTION_STRING;
-if (!containerName || !connectionString) {
-  throw new Error(
-    "Azure Storage container name and connection string must be provided"
-  );
-}
 
 export async function convertFunction(
   request: HttpRequest,
@@ -40,16 +32,9 @@ export async function convertFunction(
     };
   }
   try {
-    const credentials = new ServicePrincipalCredentials({
-      clientId: process.env.PDF_SERVICES_CLIENT_ID,
-      clientSecret: process.env.PDF_SERVICES_CLIENT_SECRET,
-    });
-    const pdfServices = new PDFServices({ credentials });
+    const pdfServices = await initAdobeDocumentService();
 
-    const blobServiceClient =
-      BlobServiceClient.fromConnectionString(connectionString);
-
-    const containerClient = blobServiceClient.getContainerClient(containerName);
+    const containerClient = await initAzureContainerClient();
     const blobClient = containerClient.getBlockBlobClient(fileId + ".docx");
 
     //check if blob exists
@@ -83,10 +68,9 @@ export async function convertFunction(
       error instanceof ServiceApiError
     ) {
       context.log("Exception encountered while executing operation", error);
-    } else {
+    }else {
       context.log("Exception encountered while executing operation", error);
-    }
-  } finally {
+    } 
   }
   return { body: "" };
 }

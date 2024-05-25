@@ -14,7 +14,7 @@ import {
   ServicePrincipalCredentials,
   ServiceUsageError,
 } from "@adobe/pdfservices-node-sdk";
-import { JobStatus, getJobStatus } from "../dbApi";
+import { JobStatus, getJobStatus, initAdobeDocumentService } from "../internalApi";
 
 function getPollingUrlFromJobId(jobId: string): string {
   //TODO Query DB for the polling URL
@@ -34,19 +34,43 @@ export async function status(
       }),
     };
   }
-  const jobStatus = await getJobStatus(jobId);
+  let jobStatus = await getJobStatus(jobId);
 
-  /*
-  const credentials = new ServicePrincipalCredentials({
-    clientId: process.env.PDF_SERVICES_CLIENT_ID,
-    clientSecret: process.env.PDF_SERVICES_CLIENT_SECRET,
-  });
-  const pdfServices = new PDFServices({ credentials });
-  const pdfServicesResponse = pdfServices.getJobStatus({
-    pollingURL: getPollingUrlFromJobId(jobId),
-  });
-  */
+  if (jobStatus === JobStatus.DONE) {
+    return {
+      status: 200,
+      body: JSON.stringify({
+        status: jobStatus,
+      }),
+    };
+  }
 
+  const pdfServices = await initAdobeDocumentService();
+  try {
+    jobStatus = (
+      await pdfServices.getJobStatus({
+        pollingURL: getPollingUrlFromJobId(jobId),
+      })
+    ).status as JobStatus;
+  } catch (err) {
+    if (err instanceof SDKError) {
+      if (err instanceof ServiceApiError) {
+        return {
+          status: 500,
+          body: JSON.stringify({
+            message: "Service API error",
+          }),
+        };
+      } else if (err instanceof ServiceUsageError) {
+        return {
+          status: 500,
+          body: JSON.stringify({
+            message: "Service usage error",
+          }),
+        };
+      }
+    }
+  }
   return {
     status: 200,
     body: JSON.stringify({
