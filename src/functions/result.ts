@@ -73,6 +73,7 @@ export async function result(
       return {
         status: 500,
         body: JSON.stringify({
+          errorMessage: err.message,
           error: "Failed to get job result",
         }),
       };
