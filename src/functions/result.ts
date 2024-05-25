@@ -44,7 +44,24 @@ export async function result(
       const blobResponse = await blobClient.uploadStream(
         Readable.from(streamAsset.readStream)
       );
-      const escapedUrl = encodeURIComponent(blobClient.url);
+      const escapedUrl = encodeURIComponent(
+        await blobClient.generateSasUrl({
+          permissions: {
+            read: true,
+            write: false,
+            delete: false,
+            add: false,
+            create: false,
+            deleteVersion: false,
+            tag: false,
+            move: false,
+            execute: false,
+            setImmutabilityPolicy: false,
+            permanentDelete: false,
+          },
+          expiresOn: new Date(Date.now() + 24 * 60 * 60 * 1000),
+        })
+      );
       return {
         status: 200,
         body: JSON.stringify({
