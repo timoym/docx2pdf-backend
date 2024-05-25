@@ -81,6 +81,47 @@ export async function getJobStatus(jobId: string): Promise<JobStatus> {
   }
 }
 
+export async function updateJobStatus(
+  jobId: string,
+  status: JobStatus
+): Promise<void> {
+  try {
+    const pool = await createDbPool();
+    const result = await pool
+      .request()
+      .query(
+        `UPDATE dbo.conversionJobs SET status = '${status}' WHERE Id = '${jobId}'`
+      );
+    if (result.rowsAffected.length === 0) {
+      throw new Error("Failed to update job status");
+    }
+  } catch (err) {
+    console.error(err);
+    throw err;
+  }
+}
+
+export async function getJobStatusAdobe(
+  jobId: string
+): Promise<JobStatus | undefined> {
+  try {
+    const pdfService = await initAdobeDocumentService();
+    const pollingURL = await getPollingUrlFromJobId(jobId);
+    if (!pollingURL) {
+      return undefined;
+    }
+    const jobStatus = (
+      await pdfService.getJobStatus({
+        pollingURL,
+      })
+    ).status as JobStatus;
+    return jobStatus;
+  } catch (err) {
+    console.error(err);
+    throw err;
+  }
+}
+
 export async function createJob(
   fileId: string,
   statusLink: string

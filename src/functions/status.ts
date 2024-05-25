@@ -5,15 +5,10 @@ import {
   InvocationContext,
 } from "@azure/functions";
 import {
-  SDKError,
-  ServiceApiError,
-  ServiceUsageError,
-} from "@adobe/pdfservices-node-sdk";
-import {
   JobStatus,
   getJobStatus,
-  getPollingUrlFromJobId,
-  initAdobeDocumentService,
+  getJobStatusAdobe,
+  updateJobStatus,
 } from "../internalApi";
 
 export async function status(
@@ -49,32 +44,9 @@ export async function status(
     };
   }
 
-  const pdfServices = await initAdobeDocumentService();
-  try {
-    jobStatus = (
-      await pdfServices.getJobStatus({
-        pollingURL: await getPollingUrlFromJobId(jobId),
-      })
-    ).status as JobStatus;
-  } catch (err) {
-    if (err instanceof SDKError) {
-      if (err instanceof ServiceApiError) {
-        return {
-          status: 500,
-          body: JSON.stringify({
-            error: "Service API error",
-          }),
-        };
-      } else if (err instanceof ServiceUsageError) {
-        return {
-          status: 500,
-          body: JSON.stringify({
-            error: "Service usage error",
-          }),
-        };
-      }
-    }
-  }
+  jobStatus = await getJobStatusAdobe(jobId);
+  updateJobStatus(jobId, jobStatus);
+
   return {
     status: 200,
     body: JSON.stringify({
