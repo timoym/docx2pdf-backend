@@ -93,6 +93,9 @@ export async function createJob(
       .query(
         `INSERT INTO dbo.conversionJobs (Id, fileId, statusLink, status) VALUES ('${jobId}', '${fileId}', '${statusLink}', '${JobStatus.IN_PROGRESS}')`
       );
+    if (result.rowsAffected.length === 0) {
+      throw new Error("Failed to create job");
+    }
     return jobId;
   } catch (err) {
     console.error(err);
