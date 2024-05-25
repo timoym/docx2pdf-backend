@@ -46,6 +46,23 @@ export async function initAzureContainerClient() {
   return blobServiceClient.getContainerClient(containerName);
 }
 
+export async function getPollingUrlFromJobId(jobId: string): Promise<string> {
+  try {
+    const pool = await createDbPool();
+    const result = await pool
+      .request()
+      .query(`SELECT statusLink FROM dbo.conversionJobs WHERE Id = '${jobId}'`);
+    //check if job exists
+    if (result.recordset.length === 0) {
+      return "";
+    }
+    return result.recordset[0].statusLink;
+  } catch (err) {
+    console.error(err);
+    throw err;
+  }
+}
+
 export async function getJobStatus(jobId: string): Promise<JobStatus> {
   try {
     const pool = await createDbPool();

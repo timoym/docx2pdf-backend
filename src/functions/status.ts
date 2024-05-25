@@ -5,25 +5,16 @@ import {
   InvocationContext,
 } from "@azure/functions";
 import {
-  CreatePDFJob,
-  CreatePDFResult,
-  PDFServices,
   SDKError,
-  MimeType,
   ServiceApiError,
-  ServicePrincipalCredentials,
   ServiceUsageError,
 } from "@adobe/pdfservices-node-sdk";
 import {
   JobStatus,
   getJobStatus,
+  getPollingUrlFromJobId,
   initAdobeDocumentService,
 } from "../internalApi";
-
-function getPollingUrlFromJobId(jobId: string): string {
-  //TODO Query DB for the polling URL
-  return `https://document-service.adobe.io/jobs/${jobId}`;
-}
 
 export async function status(
   request: HttpRequest,
@@ -62,7 +53,7 @@ export async function status(
   try {
     jobStatus = (
       await pdfServices.getJobStatus({
-        pollingURL: getPollingUrlFromJobId(jobId),
+        pollingURL: await getPollingUrlFromJobId(jobId),
       })
     ).status as JobStatus;
   } catch (err) {

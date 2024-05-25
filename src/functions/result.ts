@@ -4,24 +4,62 @@ import {
   HttpResponseInit,
   InvocationContext,
 } from "@azure/functions";
+import {
+  getJobStatus,
+  getPollingUrlFromJobId,
+  initAdobeDocumentService,
+  initAzureContainerClient,
+  JobStatus,
+} from "../internalApi";
+import { CreatePDFResult } from "@adobe/pdfservices-node-sdk";
+import { Readable } from "stream";
 
 export async function result(
   request: HttpRequest,
   context: InvocationContext
 ): Promise<HttpResponseInit> {
-  context.log(`Http function processed request for url "${request.url}"`);
+  const jobId = request.query.get("jobId");
+  if (!jobId) {
+    return {
+      status: 400,
+      body: JSON.stringify({
+        error: "Missing jobId",
+      }),
+    };
+  }
 
-  const name = request.query.get("name") || (await request.text()) || "world";
+  if ((await getJobStatus(jobId)) === JobStatus.DONE) {
+    const pollingURL = await getPollingUrlFromJobId(jobId);
+    const pdfService = await initAdobeDocumentService();
+    try {
+      const pdfServicesResponse = await pdfService.getJobResult({
+        pollingURL,
+        resultType: CreatePDFResult,
+      });
+      const resultAsset = pdfServicesResponse.result.asset;
+      const streamAsset = await pdfService.getContent({ asset: resultAsset });
 
-  //Check status
-
-  //if status ok
-
-  //download from adobe and upload to blob
-
-  // return link to azure blob
-
-  return { body: `Hello, ${name}!` };
+      const containerClient = await initAzureContainerClient();
+      const blobClient = containerClient.getBlockBlobClient(jobId + ".pdf");
+      const blobResponse = await blobClient.uploadStream(
+        Readable.from(streamAsset.readStream)
+      );
+      return {
+        status: 200,
+        body: JSON.stringify({
+          status: JobStatus.DONE,
+          fileUrl: blobClient.url,
+        }),
+      };
+    } catch (err) {
+      return {
+        status: 500,
+        body: JSON.stringify({
+          error: "Failed to get job result",
+        }),
+      };
+    }
+  }
 }
 
 app.http("result", {
