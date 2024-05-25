@@ -34,7 +34,7 @@ export async function status(
     return {
       status: 400,
       body: JSON.stringify({
-        message: "Missing jobId",
+        error: "Missing jobId",
       }),
     };
   }
@@ -44,7 +44,7 @@ export async function status(
     return {
       status: 404,
       body: JSON.stringify({
-        message: "Job not found",
+        error: "Job not found",
       }),
     };
   }
@@ -71,14 +71,14 @@ export async function status(
         return {
           status: 500,
           body: JSON.stringify({
-            message: "Service API error",
+            error: "Service API error",
           }),
         };
       } else if (err instanceof ServiceUsageError) {
         return {
           status: 500,
           body: JSON.stringify({
-            message: "Service usage error",
+            error: "Service usage error",
           }),
         };
       }

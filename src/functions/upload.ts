@@ -33,7 +33,7 @@ export async function uploadFunction(
   if (!request.body) {
     return {
       status: 400,
-      body: "Please pass a file in the request body",
+      body: JSON.stringify({ error: "Please pass a file in the request body" }),
     };
   }
 
