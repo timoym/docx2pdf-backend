@@ -1,5 +1,4 @@
 import * as sql from "mssql";
-import { env } from "process";
 import {
   CreatePDFJob,
   CreatePDFResult,
@@ -11,6 +10,8 @@ import {
   ServiceUsageError,
 } from "@adobe/pdfservices-node-sdk";
 import { BlobServiceClient } from "@azure/storage-blob";
+import { SecretClient } from "@azure/keyvault-secrets";
+import { DefaultAzureCredential } from "@azure/identity";
 import { v1 as uuidv1 } from "uuid";
 
 export enum JobStatus {
@@ -20,14 +21,26 @@ export enum JobStatus {
   UNKNOWN = "unknown",
 }
 
+async function getSecret(secretName: string): Promise<string> {
+  const credential = new DefaultAzureCredential();
+  const vaultName = process.env.KEYVAULT_NAME;
+  if (!vaultName) {
+    throw new Error("Keyvault name must be provided");
+  }
+  const url = `https://${vaultName}.vault.azure.net`;
+  const client = new SecretClient(url, credential);
+  const secret = await client.getSecret(secretName);
+  return secret.value;
+}
+
 async function createDbPool() {
-  return await sql.connect(env.DB_CONNECTION_STRING);
+  return await sql.connect(await getSecret("DB-CONNECTION-STRING"));
 }
 
 export async function initAdobeDocumentService() {
   const credentials = new ServicePrincipalCredentials({
-    clientId: process.env.PDF_SERVICES_CLIENT_ID,
-    clientSecret: process.env.PDF_SERVICES_CLIENT_SECRET,
+    clientId: await getSecret("PDF-SERVICES-CLIENT-ID"),
+    clientSecret: await getSecret("PDF-SERVICES-CLIENT-SECRET"),
   });
 
   return new PDFServices({ credentials });
@@ -35,7 +48,7 @@ export async function initAdobeDocumentService() {
 
 export async function initAzureContainerClient() {
   const containerName = process.env.AZURE_STORAGE_CONTAINER_NAME;
-  const connectionString = process.env.AZURE_STORAGE_CONNECTION_STRING;
+  const connectionString = await getSecret("AZURE-STORAGE-CONNECTION-STRING");
   if (!containerName || !connectionString) {
     throw new Error(
       "Azure Storage container name and connection string must be provided"
