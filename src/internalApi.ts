@@ -23,7 +23,7 @@ export enum JobStatus {
 
 async function getSecret(secretName: string): Promise<string> {
   const credential = new DefaultAzureCredential();
-  const vaultName = process.env.KEYVAULT_NAME;
+  const vaultName = process.env.AZURE_KEYVAULT_NAME;
   if (!vaultName) {
     throw new Error("Keyvault name must be provided");
   }
